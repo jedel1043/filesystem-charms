@@ -18,12 +18,14 @@ from lustre_ops.constants import (
     LCTL_EXECUTABLE,
     LNETCTL_EXECUTABLE,
     LUSTRE_LNET_CONF,
+    MODPROBE_EXECUTABLE,
 )
 from lustre_ops.errors import (
     LNetAddInterfaceError,
     LNetAddNetworkError,
     LNetAutodetectError,
     LNetConfigExportError,
+    LNetConfigureError,
     LNetParseError,
     LNetQueryError,
     LNetRemoveInterfaceError,
@@ -68,6 +70,7 @@ def init(networks: dict[str, list[str]] = {}) -> None:
 
     Raises:
         LNetAutodetectError: If auto-detection finds no usable network interfaces.
+        LNetConfigureError: If the LNet kernel module cannot be loaded and initialized.
         LNetError: If any other LNet operation fails.
     """
     if not networks:
@@ -76,6 +79,7 @@ def init(networks: dict[str, list[str]] = {}) -> None:
         if not networks:
             raise LNetAutodetectError("Auto-detection found no usable network interfaces")
 
+    _configure_lnet()
     _ensure_networks(networks)
     _persist_lnet_config()
 
@@ -184,6 +188,22 @@ def _network_config_tokens(spec: str) -> list[str]:
             raise LNetParseError(f"Invalid LNet network specification `{match.group()}`")
         tokens.append(f"{name}={interfaces}")
     return tokens
+
+
+def _configure_lnet() -> None:
+    """Load the LNet kernel module and initialize the LNet subsystem. Idempotent.
+
+    The module is not loaded when the Lustre packages are installed, so it must be loaded
+    and initialized explicitly before `lnetctl` can communicate with it.
+
+    Raises:
+        LNetConfigureError: If the LNet kernel module cannot be loaded and initialized.
+    """
+    try:
+        subprocess.run([MODPROBE_EXECUTABLE, "lnet"], check=True)
+        subprocess.run([LNETCTL_EXECUTABLE, "lnet", "configure"], check=True)
+    except (subprocess.CalledProcessError, FileNotFoundError) as e:
+        raise LNetConfigureError("Failed to load the LNet kernel module") from e
 
 
 def _add_interfaces(net: str, interfaces: set[str]) -> None:

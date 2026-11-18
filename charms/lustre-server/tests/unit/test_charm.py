@@ -53,8 +53,8 @@ class TestCharmInstall:
 
     @pytest.fixture(scope="function")
     def mock_repo_setup(self, mocker: MockerFixture) -> MagicMock:
-        """Mock lustre-ops PPA setup."""
-        return mocker.patch("charm.ppa.setup_lustre_repository", autospec=True)
+        """Mock lustre-ops repository setup."""
+        return mocker.patch("charm.repository.setup_lustre_repository", autospec=True)
 
     @pytest.fixture(scope="function")
     def mock_lnet_init(self, mocker: MockerFixture) -> MagicMock:
@@ -109,7 +109,7 @@ class TestCharmInstall:
         mock_repo_setup: MagicMock,
     ) -> None:
         """Repository setup failure blocks the unit."""
-        mock_repo_setup.side_effect = RepositoryError("failed to set up PPA")
+        mock_repo_setup.side_effect = RepositoryError("failed to set up repository")
 
         out = ctx.run(ctx.on.install(), testing.State())
         assert out.unit_status == testing.BlockedStatus(charm._CharmStatus.FAILED_REPO_SETUP)

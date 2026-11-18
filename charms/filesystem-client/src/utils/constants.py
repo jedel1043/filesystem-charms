@@ -2,7 +2,7 @@
 
 BASE_PACKAGES = ("ceph-common", "nfs-common", "autofs")
 LUSTRE_PACKAGES = (
-    "lustre-client-modules-dkms",
+    "lustre-dkms",
     "lustre-client-utils",
     "rdma-core",
 )

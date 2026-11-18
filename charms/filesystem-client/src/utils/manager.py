@@ -21,7 +21,7 @@ from charms.filesystem_client.v0.filesystem_info import (
     LustreInfo,
     NfsInfo,
 )
-from lustre_ops import lnet, ppa
+from lustre_ops import lnet, repository
 from lustre_ops.constants import LUSTRE_LNET_CONF
 from lustre_ops.errors import LNetError, RepositoryError
 
@@ -132,7 +132,7 @@ class MountsManager:
             return self._pkgs
 
         try:
-            ppa.setup_lustre_repository()
+            repository.setup_lustre_repository()
         except RepositoryError as e:
             _logger.error("failed to add Lustre package repository", exc_info=e)
             raise Error(str(e)) from e

@@ -28,6 +28,10 @@ class LNetConfigExportError(LNetError):
     """Raised when an LNet configuration export operation fails."""
 
 
+class LNetConfigureError(LNetError):
+    """Raised when loading and initializing the LNet kernel module fails."""
+
+
 class LNetParseError(LNetError):
     """Raised when an LNet parsing operation fails."""
 
@@ -46,10 +50,6 @@ class RepositoryError(LNetError):
 
 class RepositoryCodenameError(RepositoryError):
     """Raised when a Lustre package repository codename determination fails."""
-
-
-class RepositoryGPGKeyError(RepositoryError):
-    """Raised when a Lustre package repository GPG key operation fails."""
 
 
 class RepositorySyncError(RepositoryError):

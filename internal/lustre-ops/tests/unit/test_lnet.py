@@ -11,12 +11,13 @@ from unittest.mock import MagicMock
 import pytest
 import yaml
 from lustre_ops import lnet
-from lustre_ops.constants import LCTL_EXECUTABLE, LNETCTL_EXECUTABLE
+from lustre_ops.constants import LCTL_EXECUTABLE, LNETCTL_EXECUTABLE, MODPROBE_EXECUTABLE
 from lustre_ops.errors import (
     LNetAddInterfaceError,
     LNetAddNetworkError,
     LNetAutodetectError,
     LNetConfigExportError,
+    LNetConfigureError,
     LNetParseError,
     LNetQueryError,
     LNetRemoveInterfaceError,
@@ -57,6 +58,11 @@ def _net_show_output(networks: dict[str, list[str]] | None = None) -> str:
 
 class TestInit:
     """init() tests."""
+
+    @pytest.fixture(scope="function", autouse=True)
+    def mock_configure(self, mocker: MockerFixture) -> MagicMock:
+        """Mock lustre_ops.lnet._configure_lnet."""
+        return mocker.patch("lustre_ops.lnet._configure_lnet", autospec=True)
 
     @pytest.fixture(scope="function")
     def mock_ensure(self, mocker: MockerFixture) -> MagicMock:
@@ -112,6 +118,57 @@ class TestInit:
 
         with pytest.raises(LNetAutodetectError):
             lnet.init(networks=None)
+
+    def test_configure_failure(
+        self,
+        mock_configure: MagicMock,
+        mock_ensure: MagicMock,
+        mock_persist: MagicMock,
+    ) -> None:
+        """init() raises error and does not configure networks if LNet cannot be initialized."""
+        mock_configure.side_effect = LNetConfigureError("modprobe failed")
+
+        with pytest.raises(LNetConfigureError):
+            lnet.init(networks={"tcp": ["eth0"]})
+
+        mock_ensure.assert_not_called()
+        mock_persist.assert_not_called()
+
+
+class TestConfigureLnet:
+    """_configure_lnet() tests."""
+
+    def test_success(self, mock_run: MagicMock) -> None:
+        """The LNet kernel module is loaded with modprobe and initialized with lnetctl."""
+        lnet._configure_lnet()
+
+        assert mock_run.call_count == 2
+        assert mock_run.call_args_list[0][0][0] == [MODPROBE_EXECUTABLE, "lnet"]
+        assert mock_run.call_args_list[1][0][0] == [LNETCTL_EXECUTABLE, "lnet", "configure"]
+
+    def test_modprobe_failure_raises(self, mock_run: MagicMock) -> None:
+        """A modprobe failure raises error."""
+        mock_run.side_effect = subprocess.CalledProcessError(1, MODPROBE_EXECUTABLE)
+
+        with pytest.raises(LNetConfigureError):
+            lnet._configure_lnet()
+
+    def test_configure_failure_raises(self, mock_run: MagicMock) -> None:
+        """A lnetctl lnet configure failure raises error."""
+        mock_run.side_effect = [
+            MagicMock(returncode=0),
+            subprocess.CalledProcessError(1, LNETCTL_EXECUTABLE),
+        ]
+
+        with pytest.raises(LNetConfigureError):
+            lnet._configure_lnet()
+
+    def test_not_found_raises(self, mock_run: MagicMock) -> None:
+        """A missing modprobe executable raises error."""
+        mock_run.side_effect = FileNotFoundError(1, "/bad/path/to/modprobe")
+
+        with pytest.raises(LNetConfigureError):
+            lnet._configure_lnet()
 
 
 class TestEnsureNetworks:

@@ -17,7 +17,7 @@ LUSTRE_OST_PARENT_DIRECTORY = "/mnt"
 
 # zfsutils-linux is needed but is not an explicit dependency of the Lustre debs.
 LUSTRE_PACKAGES = [
-    "lustre-server-modules-dkms",
+    "lustre-dkms",
     "lustre-server-utils",
     "zfsutils-linux",
     "rdma-core",

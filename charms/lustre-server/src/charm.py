@@ -28,7 +28,7 @@ from errors import (
     LustrePeerDuplicateMgsError,
     LustrePeerError,
 )
-from lustre_ops import lnet, ppa
+from lustre_ops import lnet, repository
 from lustre_ops.errors import LNetError, RepositoryError
 from lustre_peer import LustrePeerAppData, LustrePeerObserver
 from state import check_lustre
@@ -95,10 +95,10 @@ class LustreCharm(ops.CharmBase):
 
     def _on_install(self, _: ops.InstallEvent):
         """Install Lustre packages."""
-        # Lustre packages are not in the Ubuntu archive. Add an external repository.
+        # Lustre packages are only in the proposed pocket of the Ubuntu archive.
         self.unit.status = ops.MaintenanceStatus(_CharmStatus.REPO_SETUP)
         try:
-            ppa.setup_lustre_repository()
+            repository.setup_lustre_repository()
         except RepositoryError as e:
             logger.exception("failed to set up Lustre package repository: %s", e)
             self.unit.status = ops.BlockedStatus(_CharmStatus.FAILED_REPO_SETUP)
